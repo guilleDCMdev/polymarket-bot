@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Trading Bot</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=SF+Pro+Display:wght@200;300;400;500;600&display=swap');
+  @import url('https://fonts.googleapis.com/css2?family=Geist+Mono:wght@300;400;500&display=swap');
+
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+
+  :root {
+    --glass: rgba(255,255,255,0.08);
+    --glass-border: rgba(255,255,255,0.14);
+    --glass-strong: rgba(255,255,255,0.13);
+    --text: rgba(255,255,255,0.95);
+    --text-2: rgba(255,255,255,0.55);
+    --text-3: rgba(255,255,255,0.3);
+    --accent: #4ade80;
+    --accent-red: #f87171;
+    --accent-blue: #60a5fa;
+    --blur: blur(24px);
+    --blur-sm: blur(12px);
+    --radius: 20px;
+    --radius-sm: 12px;
+  }
+
+  html, body {
+    height: 100%;
+    font-family: -apple-system, 'SF Pro Display', 'Helvetica Neue', sans-serif;
+    color: var(--text);
+    overflow-x: hidden;
+  }
+
+  body {
+    background: #0a0a0f;
+    min-height: 100vh;
+  }
+
+  /* Mountain background */
+  .bg {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    background:
+      radial-gradient(ellipse at 50% 100%, rgba(30,50,120,0.5) 0%, transparent 60%),
+      radial-gradient(ellipse at 20% 80%, rgba(20,40,90,0.3) 0%, transparent 50%),
+      linear-gradient(to bottom, #050508 0%, #0d1525 40%, #1a2840 100%);
+  }
+
+  /* SVG mountain range */
+  .mountains {
+    position: fixed;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 0;
+    pointer-events: none;
+  }
+
+  .stars {
+    position: fixed;
+    inset: 0;
+    z-index: 0;
+    overflow: hidden;
+  }
+
+  .star {
+    position: absolute;
+    border-radius: 50%;
+    background: white;
+    animation: twinkle var(--d, 3s) ease-in-out infinite;
+    animation-delay: var(--delay, 0s);
+  }
+
+  @keyframes twinkle {
+    0%, 100% { opacity: var(--min, 0.2); }
+    50% { opacity: var(--max, 0.9); }
+  }
+
+  /* Layout */
+  .app {
+    position: relative;
+    z-index: 1;
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 32px 24px 48px;
+  }
+
+  /* Header */
+  header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 32px;
+  }
+
+  .logo {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+
+  .logo-dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--accent);
+    box-shadow: 0 0 12px var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.4); opacity: 0.7; }
+  }
+
+  .logo h1 {
+    font-size: 17px;
+    font-weight: 500;
+    letter-spacing: 0.02em;
+    color: var(--text);
+  }
+
+  .logo span {
+    font-size: 13px;
+    color: var(--text-2);
+    font-weight: 300;
+    letter-spacing: 0.05em;
+  }
+
+  .status-pill {
+    background: rgba(74,222,128,0.12);
+    border: 1px solid rgba(74,222,128,0.25);
+    border-radius: 100px;
+    padding: 6px 14px;
+    font-size: 12px;
+    color: var(--accent);
+    letter-spacing: 0.08em;
+    font-weight: 500;
+    backdrop-filter: var(--blur-sm);
+  }
+
+  /* Glass card */
+  .glass {
+    background: var(--glass);
+    border: 1px solid var(--glass-border);
+    border-radius: var(--radius);
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+  }
+
+  .glass-strong {
+    background: var(--glass-strong);
+    border: 1px solid rgba(255,255,255,0.18);
+    border-radius: var(--radius);
+    backdrop-filter: var(--blur);
+    -webkit-backdrop-filter: var(--blur);
+  }
+
+  /* Portfolio summary */
+  .summary {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr 1fr;
+    gap: 16px;
+    margin-bottom: 24px;
+  }
+
+  .stat-card {
+    padding: 24px;
+    position: relative;
+    overflow: hidden;
+  }
+
+  .stat-card::before {
+    content: '';
+    position: absolute;
+    top: 0; left: 0; right: 0;
+    height: 1px;
+    background: linear-gradient(to right, transparent, rgba(255,255,255,0.3), transparent);
+  }
+
+  .stat-label {
+    font-size: 11px;
+    color: var(--text-3);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    margin-bottom: 10px;
+    font-weight: 500;
+  }
+
+  .stat-value {
+    font-size: 28px;
+    font-weight: 300;
+    letter-spacing: -0.02em;
+    color: var(--text);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+
+  .stat-value.positive { color: var(--accent); }
+  .stat-value.negative { color: var(--accent-red); }
+
+  .stat-sub {
+    font-size: 12px;
+    color: var(--text-2);
+    font-weight: 300;
+  }
+
+  /* Main grid */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 360px;
+    gap: 20px;
+  }
+
+  .left-col { display: flex; flex-direction: column; gap: 20px; }
+  .right-col { display: flex; flex-direction: column; gap: 20px; }
+
+  /* Section header */
+  .section-head {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+  }
+
+  .section-title {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.06em;
+    color: var(--text-2);
+    text-transform: uppercase;
+  }
+
+  /* Performance chart */
+  .chart-card { padding: 24px; }
+
+  #perfChart {
+    width: 100%;
+    height: 160px;
+    display: block;
+  }
+
+  /* Asset table */
+  .assets-card { padding: 24px; }
+
+  .asset-table { width: 100%; border-collapse: collapse; }
+
+  .asset-table th {
+    font-size: 10px;
+    color: var(--text-3);
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    text-align: right;
+    padding: 0 0 12px;
+    font-weight: 500;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+  }
+
+  .asset-table th:first-child { text-align: left; }
+
+  .asset-table td {
+    padding: 14px 0;
+    font-size: 13px;
+    text-align: right;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    color: var(--text);
+    vertical-align: middle;
+  }
+
+  .asset-table td:first-child { text-align: left; }
+  .asset-table tr:last-child td { border-bottom: none; }
+
+  .asset-name {
+    font-size: 14px;
+    font-weight: 400;
+    color: var(--text);
+  }
+
+  .asset-symbol {
+    font-size: 11px;
+    color: var(--text-3);
+    margin-top: 2px;
+    font-family: 'Geist Mono', monospace;
+  }
+
+  .signal-badge {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 3px 10px;
+    border-radius: 100px;
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+  }
+
+  .signal-BUY { background: rgba(74,222,128,0.15); color: var(--accent); border: 1px solid rgba(74,222,128,0.2); }
+  .signal-SELL { background: rgba(248,113,113,0.15); color: var(--accent-red); border: 1px solid rgba(248,113,113,0.2); }
+  .signal-HOLD { background: rgba(255,255,255,0.06); color: var(--text-3); border: 1px solid rgba(255,255,255,0.08); }
+
+  .sparkline {
+    display: inline-block;
+    vertical-align: middle;
+  }
+
+  /* Mini chart */
+  .change-positive { color: var(--accent); }
+  .change-negative { color: var(--accent-red); }
+
+  /* Positions */
+  .positions-card { padding: 20px; }
+
+  .position-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 12px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+  }
+
+  .position-item:last-child { border-bottom: none; }
+
+  .pos-left { flex: 1; }
+  .pos-name { font-size: 13px; font-weight: 400; }
+  .pos-meta { font-size: 11px; color: var(--text-3); margin-top: 2px; font-family: 'Geist Mono', monospace; }
+
+  .pos-right { text-align: right; }
+  .pos-value { font-size: 13px; font-weight: 400; }
+  .pos-pnl { font-size: 11px; margin-top: 2px; }
+
+  /* Trades feed */
+  .trades-card { padding: 20px; }
+
+  .trade-item {
+    display: flex;
+    gap: 12px;
+    padding: 10px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.04);
+    align-items: flex-start;
+  }
+
+  .trade-item:last-child { border-bottom: none; }
+
+  .trade-type {
+    font-size: 10px;
+    font-weight: 600;
+    letter-spacing: 0.08em;
+    padding: 3px 8px;
+    border-radius: 6px;
+    min-width: 36px;
+    text-align: center;
+    margin-top: 1px;
+  }
+
+  .type-BUY { background: rgba(74,222,128,0.15); color: var(--accent); }
+  .type-SELL { background: rgba(248,113,113,0.15); color: var(--accent-red); }
+
+  .trade-info { flex: 1; }
+  .trade-asset { font-size: 13px; font-weight: 400; }
+  .trade-reason { font-size: 11px; color: var(--text-3); margin-top: 2px; line-height: 1.3; }
+  .trade-val { font-size: 12px; color: var(--text-2); white-space: nowrap; text-align: right; font-family: 'Geist Mono', monospace; }
+  .trade-pnl { font-size: 11px; margin-top: 2px; text-align: right; }
+
+  .empty-state {
+    text-align: center;
+    color: var(--text-3);
+    font-size: 13px;
+    padding: 24px 0;
+    font-weight: 300;
+  }
+
+  /* Aurora effect */
+  .aurora {
+    position: fixed;
+    top: -20%;
+    left: 0;
+    right: 0;
+    height: 60%;
+    z-index: 0;
+    pointer-events: none;
+    background:
+      radial-gradient(ellipse at 30% 50%, rgba(30,60,200,0.08) 0%, transparent 50%),
+      radial-gradient(ellipse at 70% 30%, rgba(80,30,160,0.06) 0%, transparent 50%);
+    animation: aurora 12s ease-in-out infinite alternate;
+  }
+
+  @keyframes aurora {
+    0% { transform: translateX(-5%) scaleY(1); opacity: 0.8; }
+    100% { transform: translateX(5%) scaleY(1.1); opacity: 1; }
+  }
+
+  /* Responsive */
+  @media (max-width: 1100px) {
+    .main-grid { grid-template-columns: 1fr; }
+    .right-col { display: grid; grid-template-columns: 1fr 1fr; }
+  }
+
+  @media (max-width: 700px) {
+    .summary { grid-template-columns: 1fr 1fr; }
+    .right-col { grid-template-columns: 1fr; }
+    .app { padding: 20px 16px 40px; }
+  }
+
+  /* Mono values */
+  .mono { font-family: 'Geist Mono', monospace; font-size: 12px; }
+
+  /* Notification toast */
+  .toasts {
+    position: fixed;
+    bottom: 32px;
+    right: 32px;
+    z-index: 100;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+    pointer-events: none;
+  }
+
+  .toast {
+    background: rgba(20,25,40,0.9);
+    border: 1px solid var(--glass-border);
+    border-radius: 14px;
+    padding: 12px 16px;
+    backdrop-filter: var(--blur);
+    font-size: 13px;
+    animation: slideIn 0.3s ease, fadeOut 0.3s ease 2.7s forwards;
+    min-width: 240px;
+  }
+
+  .toast-buy { border-left: 3px solid var(--accent); }
+  .toast-sell { border-left: 3px solid var(--accent-red); }
+
+  @keyframes slideIn {
+    from { transform: translateX(20px); opacity: 0; }
+    to { transform: translateX(0); opacity: 1; }
+  }
+
+  @keyframes fadeOut {
+    from { opacity: 1; }
+    to { opacity: 0; }
+  }
+
+</style>
+</head>
+<body>
+
+<!-- Background -->
+<div class="bg"></div>
+<div class="aurora"></div>
+<div class="stars" id="stars"></div>
+
+<!-- Mountain SVG -->
+<div class="mountains">
+<svg viewBox="0 0 1440 400" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMax slice" style="width:100%;height:400px;display:block;">
+  <defs>
+    <linearGradient id="mtn1" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1e3a6e" stop-opacity="0.6"/>
+      <stop offset="100%" stop-color="#0d1a38" stop-opacity="0.9"/>
+    </linearGradient>
+    <linearGradient id="mtn2" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#142d5c" stop-opacity="0.7"/>
+      <stop offset="100%" stop-color="#0a1428" stop-opacity="1"/>
+    </linearGradient>
+    <linearGradient id="mtn3" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#0e2248" stop-opacity="0.85"/>
+      <stop offset="100%" stop-color="#070e1e" stop-opacity="1"/>
+    </linearGradient>
+    <filter id="blur1">
+      <feGaussianBlur stdDeviation="2"/>
+    </filter>
+  </defs>
+  <!-- Far mountains -->
+  <path d="M0,300 L80,180 L160,240 L240,140 L320,200 L400,110 L480,190 L560,120 L640,160 L720,90 L800,150 L880,80 L960,140 L1040,100 L1120,160 L1200,120 L1280,180 L1360,140 L1440,200 L1440,400 L0,400 Z" fill="url(#mtn1)" filter="url(#blur1)"/>
+  <!-- Mid mountains -->
+  <path d="M0,350 L100,220 L180,280 L280,180 L380,250 L460,170 L560,230 L660,150 L760,210 L860,160 L960,220 L1060,170 L1160,230 L1260,180 L1360,240 L1440,280 L1440,400 L0,400 Z" fill="url(#mtn2)"/>
+  <!-- Near mountains -->
+  <path d="M0,380 L120,280 L220,330 L340,240 L460,300 L580,250 L700,310 L820,260 L940,320 L1060,270 L1180,330 L1300,280 L1440,340 L1440,400 L0,400 Z" fill="url(#mtn3)"/>
+  <!-- Snow caps -->
+  <path d="M400,110 L415,130 L430,115 L440,105 L450,118 L460,110 L470,122 L450,128 L420,118 Z" fill="rgba(200,220,255,0.25)"/>
+  <path d="M720,90 L735,108 L748,95 L758,88 L768,100 L778,92 L785,105 L762,112 L735,102 Z" fill="rgba(200,220,255,0.22)"/>
+  <path d="M880,80 L896,100 L910,85 L920,78 L932,92 L940,82 L948,96 L922,104 L898,93 Z" fill="rgba(200,220,255,0.28)"/>
+  <!-- Moon -->
+  <circle cx="1300" cy="80" r="28" fill="rgba(200,215,255,0.08)" />
+  <circle cx="1300" cy="80" r="22" fill="rgba(210,225,255,0.12)" />
+  <circle cx="1300" cy="80" r="16" fill="rgba(220,235,255,0.18)" />
+</svg>
+</div>
+
+<!-- App -->
+<div class="app">
+  <header>
+    <div class="logo">
+      <div class="logo-dot"></div>
+      <div>
+        <h1>Trading Bot</h1>
+        <span>Paper Trading — 5.000 EUR</span>
+      </div>
+    </div>
+    <div class="status-pill" id="statusPill">Conectando...</div>
+  </header>
+
+  <!-- Summary stats -->
+  <div class="summary">
+    <div class="stat-card glass">
+      <div class="stat-label">Valor total</div>
+      <div class="stat-value" id="totalValue">—</div>
+      <div class="stat-sub">Capital inicial: 5.000,00 EUR</div>
+    </div>
+    <div class="stat-card glass">
+      <div class="stat-label">Beneficio / Perdida</div>
+      <div class="stat-value" id="totalPnl">—</div>
+      <div class="stat-sub" id="totalPnlPct">—</div>
+    </div>
+    <div class="stat-card glass">
+      <div class="stat-label">Capital libre</div>
+      <div class="stat-value" id="freeCapital">—</div>
+      <div class="stat-sub">Disponible para invertir</div>
+    </div>
+    <div class="stat-card glass">
+      <div class="stat-label">Win rate</div>
+      <div class="stat-value" id="winRate">—</div>
+      <div class="stat-sub" id="totalTrades">0 operaciones</div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+    <div class="left-col">
+
+      <!-- Performance chart -->
+      <div class="chart-card glass">
+        <div class="section-head">
+          <div class="section-title">Rendimiento</div>
+          <div class="mono" style="color:var(--text-3);font-size:11px" id="perfLabel">EUR</div>
+        </div>
+        <canvas id="perfChart"></canvas>
+      </div>
+
+      <!-- Asset table -->
+      <div class="assets-card glass">
+        <div class="section-head">
+          <div class="section-title">Mercados</div>
+        </div>
+        <table class="asset-table">
+          <thead>
+            <tr>
+              <th>Activo</th>
+              <th>Precio</th>
+              <th>24h</th>
+              <th>RSI</th>
+              <th>Momentum</th>
+              <th>Tendencia</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody id="assetBody">
+            <tr><td colspan="7" class="empty-state">Cargando mercados...</td></tr>
+          </tbody>
+        </table>
+      </div>
+
+    </div>
+
+    <div class="right-col">
+
+      <!-- Positions -->
+      <div class="positions-card glass">
+        <div class="section-head">
+          <div class="section-title">Posiciones abiertas</div>
+          <div class="mono" style="color:var(--text-3);font-size:11px" id="posCount">0</div>
+        </div>
+        <div id="positionsList">
+          <div class="empty-state">Sin posiciones abiertas</div>
+        </div>
+      </div>
+
+      <!-- Trade feed -->
+      <div class="trades-card glass">
+        <div class="section-head">
+          <div class="section-title">Ultimas operaciones</div>
+        </div>
+        <div id="tradesList">
+          <div class="empty-state">Esperando operaciones...</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Toasts -->
+<div class="toasts" id="toasts"></div>
+
+<script>
+// ── Stars ────────────────────────────────────────────────────────────────────
+const starsEl = document.getElementById('stars');
+for (let i = 0; i < 120; i++) {
+  const s = document.createElement('div');
+  s.className = 'star';
+  const size = Math.random() * 2 + 0.5;
+  s.style.cssText = `
+    width:${size}px;height:${size}px;
+    left:${Math.random()*100}%;top:${Math.random()*70}%;
+    --d:${2+Math.random()*4}s;
+    --delay:${Math.random()*5}s;
+    --min:${0.1+Math.random()*0.2};
+    --max:${0.5+Math.random()*0.5};
+  `;
+  starsEl.appendChild(s);
+}
+
+// ── Chart ────────────────────────────────────────────────────────────────────
+const canvas = document.getElementById('perfChart');
+const ctx = canvas.getContext('2d');
+let perfData = [];
+
+function resizeCanvas() {
+  canvas.width = canvas.offsetWidth * window.devicePixelRatio;
+  canvas.height = canvas.offsetHeight * window.devicePixelRatio;
+  ctx.scale(window.devicePixelRatio, window.devicePixelRatio);
+  drawChart();
+}
+
+function drawChart() {
+  const w = canvas.offsetWidth;
+  const h = canvas.offsetHeight;
+  ctx.clearRect(0, 0, w, h);
+  if (perfData.length < 2) return;
+
+  const values = perfData.map(p => p.value);
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const range = max - min || 1;
+  const pad = { top: 16, right: 8, bottom: 24, left: 56 };
+
+  const x = i => pad.left + (i / (values.length - 1)) * (w - pad.left - pad.right);
+  const y = v => pad.top + (1 - (v - min) / range) * (h - pad.top - pad.bottom);
+
+  // Grid lines
+  ctx.strokeStyle = 'rgba(255,255,255,0.05)';
+  ctx.lineWidth = 1;
+  for (let i = 0; i <= 3; i++) {
+    const yy = pad.top + i * (h - pad.top - pad.bottom) / 3;
+    ctx.beginPath();
+    ctx.moveTo(pad.left, yy);
+    ctx.lineTo(w - pad.right, yy);
+    ctx.stroke();
+    const val = max - i * range / 3;
+    ctx.fillStyle = 'rgba(255,255,255,0.25)';
+    ctx.font = '10px Geist Mono, monospace';
+    ctx.textAlign = 'right';
+    ctx.fillText(val.toFixed(0), pad.left - 6, yy + 3);
+  }
+
+  // Gradient fill
+  const grad = ctx.createLinearGradient(0, pad.top, 0, h - pad.bottom);
+  const isProfit = values[values.length - 1] >= 5000;
+  grad.addColorStop(0, isProfit ? 'rgba(74,222,128,0.3)' : 'rgba(248,113,113,0.3)');
+  grad.addColorStop(1, 'rgba(0,0,0,0)');
+
+  ctx.beginPath();
+  ctx.moveTo(x(0), y(values[0]));
+  for (let i = 1; i < values.length; i++) {
+    const px = x(i-1), py = y(values[i-1]);
+    const cx1 = px + (x(i)-px)/2, cy1 = py;
+    const cx2 = px + (x(i)-px)/2, cy2 = y(values[i]);
+    ctx.bezierCurveTo(cx1, cy1, cx2, cy2, x(i), y(values[i]));
+  }
+  ctx.lineTo(x(values.length-1), h - pad.bottom);
+  ctx.lineTo(x(0), h - pad.bottom);
+  ctx.closePath();
+  ctx.fillStyle = grad;
+  ctx.fill();
+
+  // Line
+  ctx.beginPath();
+  ctx.moveTo(x(0), y(values[0]));
+  for (let i = 1; i < values.length; i++) {
+    const px = x(i-1), py = y(values[i-1]);
+    const cx1 = px + (x(i)-px)/2, cy1 = py;
+    const cx2 = px + (x(i)-px)/2, cy2 = y(values[i]);
+    ctx.bezierCurveTo(cx1, cy1, cx2, cy2, x(i), y(values[i]));
+  }
+  ctx.strokeStyle = isProfit ? 'rgba(74,222,128,0.9)' : 'rgba(248,113,113,0.9)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Dot at end
+  const lx = x(values.length-1), ly = y(values[values.length-1]);
+  ctx.beginPath();
+  ctx.arc(lx, ly, 4, 0, Math.PI*2);
+  ctx.fillStyle = isProfit ? '#4ade80' : '#f87171';
+  ctx.fill();
+}
+
+window.addEventListener('resize', resizeCanvas);
+setTimeout(resizeCanvas, 100);
+
+// ── Sparkline ─────────────────────────────────────────────────────────────────
+function sparkline(data, color) {
+  const w = 64, h = 28;
+  const min = Math.min(...data), max = Math.max(...data), range = max-min||1;
+  const pts = data.map((v,i) => `${i/(data.length-1)*w},${h-(v-min)/range*h}`).join(' ');
+  return `<svg width="${w}" height="${h}" class="sparkline">
+    <polyline points="${pts}" fill="none" stroke="${color}" stroke-width="1.5" stroke-linejoin="round"/>
+  </svg>`;
+}
+
+// ── Formatters ────────────────────────────────────────────────────────────────
+const fmtEUR = v => v.toLocaleString('es-ES', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) + ' EUR';
+const fmtPrice = v => v >= 1000 ? v.toLocaleString('es-ES', {minimumFractionDigits:2,maximumFractionDigits:2}) : v.toLocaleString('es-ES', {minimumFractionDigits:2,maximumFractionDigits:4});
+
+// ── Render ────────────────────────────────────────────────────────────────────
+function render(state) {
+  const pnl = state.pnl;
+  const pct = parseFloat(state.pnlPct);
+  const isPos = pnl >= 0;
+
+  document.getElementById('totalValue').textContent = fmtEUR(state.totalValue);
+  document.getElementById('freeCapital').textContent = fmtEUR(state.capital);
+  document.getElementById('winRate').textContent = state.winRate + '%';
+  document.getElementById('totalTrades').textContent = state.totalTrades + ' operaciones';
+
+  const pnlEl = document.getElementById('totalPnl');
+  pnlEl.textContent = (isPos ? '+' : '') + fmtEUR(pnl);
+  pnlEl.className = 'stat-value ' + (isPos ? 'positive' : 'negative');
+  document.getElementById('totalPnlPct').textContent = (isPos ? '+' : '') + pct + '%';
+
+  // Performance chart
+  if (state.performance.length > 1) {
+    perfData = state.performance;
+    drawChart();
+  }
+
+  // Assets table
+  const tbody = document.getElementById('assetBody');
+  tbody.innerHTML = state.assets.map(a => {
+    const chgPos = parseFloat(a.change24h) >= 0;
+    const color = chgPos ? '#4ade80' : '#f87171';
+    const srcDot = a.source === 'real'
+      ? `<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:#4ade80;box-shadow:0 0 6px #4ade80;margin-left:5px;vertical-align:middle;" title="Precio real"></span>`
+      : `<span style="display:inline-block;width:5px;height:5px;border-radius:50%;background:rgba(255,255,255,0.2);margin-left:5px;vertical-align:middle;" title="Precio simulado"></span>`;
+    return `<tr data-key="${a.key}">
+      <td>
+        <div class="asset-name">${a.name}${srcDot}</div>
+        <div class="asset-symbol">${a.symbol}</div>
+      </td>
+      <td class="mono" id="price-${a.key}">${fmtPrice(a.price)}</td>
+      <td class="${chgPos ? 'change-positive' : 'change-negative'} mono">${chgPos?'+':''}${a.change24h}%</td>
+      <td class="mono" style="color:${a.rsi < 35 ? '#4ade80' : a.rsi > 65 ? '#f87171' : 'rgba(255,255,255,0.5)'}">${a.rsi}</td>
+      <td class="mono ${parseFloat(a.momentum)>=0?'change-positive':'change-negative'}">${parseFloat(a.momentum)>=0?'+':''}${a.momentum}%</td>
+      <td>${sparkline(a.history, color)}</td>
+      <td><span class="signal-badge signal-${a.signal}">${a.signal}</span></td>
+    </tr>`;
+  }).join('');
+
+  // Positions
+  const posEl = document.getElementById('positionsList');
+  document.getElementById('posCount').textContent = state.positions.length;
+  if (state.positions.length === 0) {
+    posEl.innerHTML = '<div class="empty-state">Sin posiciones abiertas</div>';
+  } else {
+    posEl.innerHTML = state.positions.map(p => {
+      const isPos = parseFloat(p.pnlPct) >= 0;
+      return `<div class="position-item">
+        <div class="pos-left">
+          <div class="pos-name">${p.name}</div>
+          <div class="pos-meta">${p.shares.toFixed(4)} @ ${fmtPrice(p.avgCost)}</div>
+        </div>
+        <div class="pos-right">
+          <div class="pos-value">${fmtEUR(p.value)}</div>
+          <div class="pos-pnl ${isPos ? 'change-positive' : 'change-negative'}">${isPos?'+':''}${p.pnlPct}%</div>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  // Trades
+  const trEl = document.getElementById('tradesList');
+  if (state.trades.length === 0) {
+    trEl.innerHTML = '<div class="empty-state">Esperando operaciones...</div>';
+  } else {
+    trEl.innerHTML = state.trades.slice(0,12).map(t => {
+      const pnlStr = t.pnl !== null
+        ? `<div class="trade-pnl ${t.pnl >= 0 ? 'change-positive' : 'change-negative'}">${t.pnl >= 0 ? '+' : ''}${t.pnl.toFixed(2)} EUR</div>`
+        : '';
+      return `<div class="trade-item">
+        <div class="trade-type type-${t.type}">${t.type}</div>
+        <div class="trade-info">
+          <div class="trade-asset">${t.name}</div>
+          <div class="trade-reason">${t.reason}</div>
+        </div>
+        <div>
+          <div class="trade-val">${t.value.toFixed(2)} EUR</div>
+          ${pnlStr}
+        </div>
+      </div>`;
+    }).join('');
+  }
+}
+
+// ── Toast ─────────────────────────────────────────────────────────────────────
+function showToast(trade) {
+  const el = document.createElement('div');
+  el.className = `toast toast-${trade.type.toLowerCase()}`;
+  const pnlStr = trade.pnl !== null ? ` — ${trade.pnl >= 0 ? '+' : ''}${trade.pnl.toFixed(2)} EUR` : '';
+  el.innerHTML = `<strong style="color:${trade.type==='BUY'?'#4ade80':'#f87171'}">${trade.type}</strong> ${trade.name} · ${trade.value.toFixed(2)} EUR${pnlStr}`;
+  document.getElementById('toasts').appendChild(el);
+  setTimeout(() => el.remove(), 3200);
+}
+
+// ── WebSocket ─────────────────────────────────────────────────────────────────
+function connect() {
+  const proto = location.protocol === 'https:' ? 'wss' : 'ws';
+  const ws = new WebSocket(`${proto}://${location.host}`);
+
+  ws.onopen = () => {
+    document.getElementById('statusPill').textContent = 'Conectado';
+  };
+
+  ws.onmessage = (e) => {
+    const msg = JSON.parse(e.data);
+    if (msg.type === 'state') render(msg.data);
+    if (msg.type === 'trades') msg.data.forEach(showToast);
+    // Precio en tiempo real de Binance — actualiza solo la celda, sin re-render completo
+    if (msg.type === 'price') {
+      const el = document.getElementById(`price-${msg.key}`);
+      if (el) {
+        el.textContent = fmtPrice(msg.price);
+        el.style.transition = 'color 0.3s';
+        el.style.color = '#4ade80';
+        setTimeout(() => { el.style.color = ''; }, 600);
+      }
+    }
+  };
+
+  ws.onclose = () => {
+    document.getElementById('statusPill').textContent = 'Reconectando...';
+    setTimeout(connect, 2000);
+  };
+}
+
+connect();
+</script>
+</body>
+</html>

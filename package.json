@@ -1,0 +1,16 @@
+{
+  "name": "polymarket-bot",
+  "version": "1.0.0",
+  "description": "Autonomous paper trading bot with AI strategy",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node src/server.js",
+    "dev": "node --watch src/server.js"
+  },
+  "dependencies": {
+    "express": "^4.18.2",
+    "ws": "^8.16.0",
+    "node-cron": "^3.0.3",
+    "axios": "^1.6.7"
+  }
+}
